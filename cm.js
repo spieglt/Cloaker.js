@@ -44,7 +44,7 @@ window.onload = () => {
 };
 
 
-let fileName, inBuffer, outBuffers, outFile, downloadLink;
+let filename, inBuffer, outBuffers, outFile, downloadLink;
 let worker = new Worker('./worker.js');
 
 worker.onmessage = (message) => {
@@ -62,10 +62,10 @@ worker.onmessage = (message) => {
     case 'finalEncryption':
       outBuffers.push(message.data.encryptedChunk);
       replace(message.data.progress);
-      outFile = new File(outBuffers, fileName + '.cloaker');
+      outFile = new File(outBuffers, filename + '.cloaker');
       output('\ndone\n');
       downloadLink = document.getElementById('downloadLink');
-      downloadLink.download = fileName + '.cloaker';
+      downloadLink.download = filename + '.cloaker';
       downloadLink.style = '';
       downloadLink.href = URL.createObjectURL(outFile);
       break;
@@ -81,9 +81,14 @@ worker.onmessage = (message) => {
       outBuffers.push(message.data.decryptedChunk);
       replace(message.data.progress);
       // if filename is longer than .cloaker and ends with .cloaker, chop off extension. if not, leave as is and let the user or OS decide.
-      let outputFilename = fileName.length > '.cloaker'.length && fileName.slice(fileName.length - '.cloaker'.length, fileName.length) === '.cloaker'
-        ? fileName.slice(0, fileName.length - '.cloaker'.length)
-        : fileName;
+      let suffixes = ['.cloaker', '.cloaker.txt']; // Chrome on Android adds .cloaker.txt for some reason
+      let outputFilename = filename;
+      for (i in suffixes) {
+        let len = suffixes[i].length;
+        if (filename.length > len && filename.slice(filename.length - len, filename.length) === suffixes[i]) {
+          outputFilename = filename.slice(0, filename.length - len);
+        }
+      }
       outFile = new File(outBuffers, outputFilename);
       output('\ndone\n');
       downloadLink = document.getElementById('downloadLink');
@@ -103,8 +108,8 @@ worker.onmessage = (message) => {
 startEncryption = async (inFile, password) => {
   inBuffer = await inFile.arrayBuffer();
   outBuffers = [new Uint8Array(SIGNATURE)];
-  fileName = inFile.name;
-  output(`filename: ${fileName}, size: ${inBuffer.byteLength}\n`);
+  filename = inFile.name;
+  output(`filename: ${filename}, size: ${inBuffer.byteLength}\n`);
   let salt = new Uint8Array(crypto_pwhash_argon2id_SALTBYTES);
   window.crypto.getRandomValues(salt);
   outBuffers.push(salt);
@@ -114,9 +119,9 @@ startEncryption = async (inFile, password) => {
 startDecryption = async (inFile, password) => {
   inBuffer = await inFile.arrayBuffer();
   outBuffers = [];
-  fileName = inFile.name;
-  output(`filename: ${fileName}, size: ${inBuffer.byteLength}\n`);
-  worker.postMessage({ inBuffer, password, fileName, command: 'startDecryption' }, [inBuffer]); // make sure to transfer inBuffer, not clone
+  filename = inFile.name;
+  output(`filename: ${filename}, size: ${inBuffer.byteLength}\n`);
+  worker.postMessage({ inBuffer, password, filename, command: 'startDecryption' }, [inBuffer]); // make sure to transfer inBuffer, not clone
 }
 
 const output = (msg) => {

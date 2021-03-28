@@ -56,7 +56,7 @@ const hydrate = (sodium) => {
         sodium.crypto_pwhash_MEMLIMIT_INTERACTIVE,
         sodium.crypto_pwhash_ALG_ARGON2ID13
       );
-    } else if (compareArrays(inBuffer.slice(0, 4), LEGACY_SIGNATURE) || extensionIsCloaker(message.data.fileName)) {
+    } else if (compareArrays(inBuffer.slice(0, 4), LEGACY_SIGNATURE) || extensionIsCloaker(message.data.filename)) {
       legacy = true;
       offset = compareArrays(inBuffer.slice(0, 4), LEGACY_SIGNATURE) ? 4 : 0; // skip signature
       salt = new Uint8Array(sodium.crypto_pwhash_scryptsalsa208sha256_SALTBYTES);
@@ -123,7 +123,7 @@ const compareArrays = (a1, a2) => {
   return true;
 }
 
-const extensionIsCloaker = (fileName) => {
-  return fileName.length > '.cloaker'.length
-    && fileName.slice(fileName.length - '.cloaker'.length, fileName.length) === '.cloaker'
+const extensionIsCloaker = (filename) => {
+  return filename.length > '.cloaker'.length
+    && filename.slice(filename.length - '.cloaker'.length, filename.length) === '.cloaker'
 }
