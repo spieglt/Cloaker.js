@@ -26,12 +26,12 @@ window.onload = () => {
     encryptElem.click();
   }, false);
 
-  encryptElem.onchange = async (e) => {
+  encryptElem.oninput = async (e) => {
     const password = passwordBox.value;
-    // if (password.length < 12) {
-    //   alert('Password must be at least 12 characters. 16 or more is recommended.');
-    //   return;
-    // }
+    if (password.length < 12) {
+      alert('Password must be at least 12 characters. 16 or more is recommended.');
+      return;
+    }
     startEncryption(encryptElem.files[0], password);
   };
 
@@ -130,15 +130,9 @@ const output = (msg) => {
   let message = document.createElement('span');
   message.textContent = msg;
   outputBox.appendChild(message);
+  outputBox.appendChild(document.createElement('br'));
 }
 
 const replace = (msg) => {
   progressBar.value = msg;
 }
-
-/*
-TODO:
-typescript
-large file testing
-vector graphic logo
-*/

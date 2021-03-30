@@ -6,20 +6,55 @@
         <link rel="stylesheet" href="style.css">
     </head>
     <body>
-        <div id='mainBox'>
-            <input type='password' label='Password' id='passwordBox'
-                placeholder='Step 1: enter password here. Minimum 12 characters, though longer is better.'>
+        <div id='top'>
+            <div id='mainBox'>
+                <input type='password' label='Password' id='passwordBox'
+                    placeholder='Step 1: enter password here. Minimum 12 characters, though longer is better.'>
 
-            <div id="buttonsBox">
-                <input type='file' id='encryptElem' hidden/>
-                <button id='encryptButton' class='button'>Encrypt</button>
-                <input type='file' id='decryptElem' hidden/>
-                <button id='decryptButton' class='button'>Decrypt</button>
+                <div id="buttonsBox">
+                    <input type='file' id='encryptElem' hidden/>
+                    <button id='encryptButton' class='button'>Encrypt</button>
+                    <input type='file' id='decryptElem' hidden/>
+                    <button id='decryptButton' class='button'>Decrypt</button>
+                </div>
+
+                <div id='outputBox'></div>
+                <progress id='progressBar' value=0 max=100></progress>
+                <a href='' download id='downloadLink'>Download</a>
             </div>
-
-            <div id='outputBox'></div>
-            <progress id='progressBar' value=0 max=100></progress>
-            <a href='' download id='downloadLink' style='display:none'>Download</a>
+        </div>
+        <div id='bottom'>
+            <h1>FAQ</h1>
+            <p>
+                <b>Q:</b> What is this and why is it here?
+                <br>
+                <b>A:</b> It's an easy way to encrypt a file with a password and decrypt it later. It interoperates with the desktop versions of <a href='https://cloaker.spiegl.dev/'>Cloaker</a>. I wanted a mobile version but developing apps was a hassle and distributing this as a small static website is much more pleasant than paying Apple $100/year for a developer account and dealing with app stores.
+            </p>
+            <p>
+                <b>Q:</b> How do I encrypt multiple files under the same password?
+                <br>
+                <b>A:</b> Put them in a <code>.zip</code> first then encrypt that. <a href='https://support.apple.com/en-us/HT211132'>iOS</a> does this natively, but for Android you'll need a third-party app.
+            </p>
+            <p>
+                <b>Q:</b> What happens to my data?
+                <br>
+                <b>A:</b> Nothing you encrypt or decrypt with Cloaker is sent anywhere. Everything is done on your device, by your browser, with JavaScript and WebAssembly. This is just a static HTML/CSS/JS page served by GitHub, so they likely collect some metadata about visits to this page (see their <a href='https://docs.github.com/en/github/site-policy/github-privacy-statement'>privacy policy</a>), but I do not.
+            </p>
+            <p>
+                <b>Q:</b> Did you write the crypto?
+                <br>
+                <b>A:</b> No, Cloaker just uses the <code>pwhash</code> and <code>secretstream</code> APIs from <a href='https://github.com/jedisct1/libsodium.js/'>libsodium.js</a>.
+            </p>
+            <p>
+                <b>Q:</b> How large of a file can I encrypt/decrypt?
+                <br>
+                <b>A:</b> Depends how much RAM is in your device. Cloaker has to keep the file in memory in encrypted <i>and</i> decrypted form until you navigate away from the page, so it may not work for files larger than a GB or two on phones. (Come on, <a href='https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream#browser_compatibility'>FileSystemWritableFileStream</a>!)
+            </p>
+            <p>
+                <b>Q:</b> How does it encrypt/decrypt in a long-running operation without interrupting the UI?
+                <br>
+                <b>A:</b> <a href='https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API'>Web workers!</a>
+            </p>
         </div>
     </body>
 </html>

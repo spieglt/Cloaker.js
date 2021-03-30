@@ -1,8 +1,9 @@
-body {
+#top {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100%;
+    height: 60%;
 }
 
 #mainBox {
@@ -12,7 +13,7 @@ body {
     align-items: center;
     width: 50%;
     min-height: 50%;
-    border: 1px solid red;
+    border: 5px solid black;
 }
 
 #passwordBox {
@@ -30,8 +31,27 @@ body {
 }
 
 .button {
-    background-color: lightblue;
-    border-radius: 8px;
-    height: 50px;
-    width: 100px;
+    color: white;
+    background-color: black;
+    font-weight: bold;
+    font-size: 20px;
+    border: none;
+    border-radius: 10px;
+    height: 75px;
+    width: 25%;
+}
+
+#downloadLink {
+    display: none;
+}
+
+#bottom {
+    width: 75%;
+    margin: auto;
+}
+
+p {
+    font-size: 20px;
+    line-height: 32px;
+    margin-bottom: 30px;
 }
