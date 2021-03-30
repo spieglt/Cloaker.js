@@ -129,7 +129,7 @@ startDecryption = async (inFile, password) => {
 const output = (msg) => {
   let message = document.createElement('span');
   message.textContent = msg;
-  output.appendChild(message);
+  outputBox.appendChild(message);
 }
 
 const replace = (msg) => {

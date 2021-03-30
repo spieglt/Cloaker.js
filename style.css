@@ -8,7 +8,7 @@ body {
 #mainBox {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: space-around;
     align-items: center;
     width: 50%;
     min-height: 50%;
@@ -19,8 +19,19 @@ body {
     min-width: 75%;
 }
 
+#progressBar {
+    min-width: 75%;
+}
+
 #buttonsBox {
     display: flex;
     justify-content: space-around;
     width: 100%;
+}
+
+.button {
+    background-color: lightblue;
+    border-radius: 8px;
+    height: 50px;
+    width: 100px;
 }
