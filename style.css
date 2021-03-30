@@ -1,0 +1,26 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+#mainBox {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 50%;
+    height: 50%;
+    border: 1px solid red;
+}
+
+#passwordBox {
+    min-width: 75%;
+}
+
+#buttonsBox {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+}

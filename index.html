@@ -3,24 +3,21 @@
     <head>
         <title>Cloaker Mobile - File Encryption</title>
         <script src="cm.js" type='text/javascript'></script>
+        <link rel="stylesheet" href="style.css">
     </head>
     <body>
-        <div id="mainBox" style="margin: auto; display: flex; flex-direction: column;">
-            <br>
-            <input type='password' label='Password' id='passwordBox' style='width: 500px;'
+        <div id='mainBox'>
+            <input type='password' label='Password' id='passwordBox'
                 placeholder='Step 1: enter password here. Minimum 12 characters, though longer is better.'>
 
-            <div id="buttonsBox" style="display: flex;">
-                <br>
+            <div id="buttonsBox">
                 <input type='file' id='encryptElem' hidden/>
                 <button id='encryptButton'>Encrypt</button>
-
                 <input type='file' id='decryptElem' hidden/>
                 <button id='decryptButton'>Decrypt</button>
             </div>
-            <br>
-            <textarea readonly='true' wrap='soft' style='width: 500px; height: 100px;' id='outputBox'></textarea>
-            <br>
+
+            <div id='outputBox'></div>
             <a href='' download id='downloadLink' style='display:none'>Download</a>
         </div>
     </body>
