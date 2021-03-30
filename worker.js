@@ -36,7 +36,7 @@ const hydrate = (sodium) => {
       ? 'finalEncryption'
       : 'encryptedChunk';
     const encryptedChunk = sodium.crypto_secretstream_xchacha20poly1305_push(state, chunk, null, tag);
-    const progress = `encrypting... ${((offset/inBuffer.byteLength)*100).toFixed()}%`;
+    const progress = ((offset/inBuffer.byteLength)*100).toFixed();
     postMessage({ response, progress, encryptedChunk });
   }
 
@@ -86,7 +86,7 @@ const hydrate = (sodium) => {
       return;
     }
     let decryptedChunk = res.message;
-    const progress = `decrypting... ${((offset/inBuffer.byteLength)*100).toFixed()}%`;
+    const progress = ((offset/inBuffer.byteLength)*100).toFixed();
     let response = res.tag === sodium.crypto_secretstream_xchacha20poly1305_TAG_FINAL
       ? 'finalDecryption'
       : 'decryptedChunk';

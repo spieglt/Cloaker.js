@@ -11,6 +11,7 @@ let decryptButton;
 let decryptElem;
 let passwordBox;
 let outputBox;
+let progressBar;
 
 window.onload = () => {
   encryptButton = document.getElementById('encryptButton');
@@ -19,6 +20,7 @@ window.onload = () => {
   decryptElem = document.getElementById('decryptElem');
   passwordBox = document.getElementById('passwordBox');
   outputBox = document.getElementById('outputBox');
+  progressBar = document.getElementById('progressBar');
 
   encryptButton.addEventListener('click', (e) => {
     encryptElem.click();
@@ -125,12 +127,13 @@ startDecryption = async (inFile, password) => {
 }
 
 const output = (msg) => {
-  line = output.value === undefined ? '' : '\n';
-  outputBox.value = outputBox.value + line + msg;
+  let message = document.createElement('span');
+  message.textContent = msg;
+  output.appendChild(message);
 }
 
 const replace = (msg) => {
-  outputBox.value = outputBox.value.slice(0, outputBox.value.lastIndexOf('\n')) + '\n' + msg;
+  progressBar.value = msg;
 }
 
 /*
