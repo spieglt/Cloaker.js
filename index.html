@@ -33,7 +33,7 @@
             <p>
                 <b>Q:</b> What is this and why is it here?
                 <br>
-                <b>A:</b> It's an easy way to encrypt a file with a password and decrypt it later. It interoperates with the desktop versions of <a href='https://cloaker.spiegl.dev/'>Cloaker</a>. I wanted a mobile version but writing apps was a hassle and distributing this as a small static website is much more pleasant than paying Apple $100/year for a developer account and dealing with app stores.
+                <b>A:</b> It's an easy way to encrypt a file with a password and decrypt it later. I wrote the <a href='https://cloaker.spiegl.dev/'>desktop version</a> out of frustration that there was no simple, portable, safe way to protect a file with a password. I wanted to make a mobile version but writing apps was a hassle and distributing this as a small static website is much more pleasant than paying Apple $100/year for a developer account and dealing with app stores. This version is interoperable with the desktop version.
             </p>
             <p>
                 <b>Q:</b> How do I encrypt multiple files under the same password?
@@ -46,7 +46,7 @@
                 <b>A:</b> Nothing you encrypt or decrypt with Cloaker is sent anywhere. Everything is done on your device, by your browser, with JavaScript and WebAssembly. This page is just static HTML/CSS/JS served by GitHub, so they likely collect some metadata about visits (see their <a href='https://docs.github.com/en/github/site-policy/github-privacy-statement'>privacy policy</a>), but I do not.
             </p>
             <p>
-                <b>Q:</b> Did you write the crypto? Where's the code?
+                <b>Q:</b> Did you write the crypto, you fool? Where's the code?
                 <br>
                 <b>A:</b> No, Cloaker just uses the <code>pwhash</code> and <code>secretstream</code> APIs from <a href='https://github.com/jedisct1/libsodium.js/'>libsodium.js</a>. Code is <a href='https://github.com/spieglt/Cloaker.js'>here</a>.
             </p>

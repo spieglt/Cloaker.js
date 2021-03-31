@@ -24,11 +24,9 @@ window.onload = () => {
   outputBox = document.getElementById('outputBox');
   progressBar = document.getElementById('progressBar');
 
-  encryptButton.addEventListener('click', (e) => {
-    encryptElem.click();
-  }, false);
+  encryptButton.onclick = () => encryptElem.click();
 
-  encryptElem.oninput = async (e) => {
+  encryptElem.oninput = () => {
     const password = passwordBox.value;
     if (password.length < 12) {
       passwordBox.classList.add('passwordError');
@@ -44,11 +42,9 @@ window.onload = () => {
     startEncryption(encryptElem.files[0], password);
   };
 
-  decryptButton.addEventListener('click', (e) => {
-    decryptElem.click();
-  }, false);
+  decryptButton.onclick = () => decryptElem.click();
 
-  decryptElem.onchange = async (e) => {
+  decryptElem.oninput = () => {
     const password = passwordBox.value;
     startDecryption(decryptElem.files[0], password);
   };
