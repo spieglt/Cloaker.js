@@ -92,3 +92,13 @@ p {
     87% { right: 5px; }
     100% { left: 0px; }
 }
+
+.passwordErrorTitle {
+    animation-name: passwordErrorTitle;
+    animation-duration: 3s;
+}
+
+@keyframes passwordErrorTitle {
+    20% { color: red; }
+    80% { color: red; }
+}

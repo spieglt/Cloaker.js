@@ -9,6 +9,7 @@ let encryptButton;
 let encryptElem;
 let decryptButton;
 let decryptElem;
+let passwordTitle;
 let passwordBox;
 let outputBox;
 let progressBar;
@@ -18,6 +19,7 @@ window.onload = () => {
   encryptElem = document.getElementById('encryptElem');
   decryptButton = document.getElementById('decryptButton');
   decryptElem = document.getElementById('decryptElem');
+  passwordTitle = document.getElementById('passwordTitle');
   passwordBox = document.getElementById('passwordBox');
   outputBox = document.getElementById('outputBox');
   progressBar = document.getElementById('progressBar');
@@ -33,6 +35,10 @@ window.onload = () => {
       setTimeout(() => {
         passwordBox.classList.remove('passwordError');
       }, 1000);
+      passwordTitle.classList.add('passwordErrorTitle');
+      setTimeout(() => {
+        passwordTitle.classList.remove('passwordErrorTitle');
+      }, 4000);
       return;
     }
     startEncryption(encryptElem.files[0], password);
