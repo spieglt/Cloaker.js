@@ -3,7 +3,11 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 60%;
+}
+
+#title {
+    font-size: 72px;
+    margin-top: 50px;
 }
 
 #mainBox {
@@ -11,9 +15,9 @@
     flex-direction: column;
     justify-content: space-around;
     align-items: center;
-    width: 50%;
-    min-height: 50%;
+    width: 80%;
     border: 5px solid black;
+    min-height: 400px;
 }
 
 #passwordForm {
@@ -66,6 +70,7 @@
 #bottom {
     width: 75%;
     margin: auto;
+    margin-top: 150px;
 }
 
 p {
