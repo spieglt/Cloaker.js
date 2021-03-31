@@ -1,5 +1,6 @@
 #top {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     height: 60%;
@@ -76,7 +77,7 @@ p {
     position: relative;
     animation-name: passwordError;
     animation-duration: 200ms;
-    animation-iteration-count: 5;
+    animation-iteration-count: 3;
     border: 2px solid red;
     border-radius: 4px;
 }
