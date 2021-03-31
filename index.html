@@ -8,8 +8,10 @@
     <body>
         <div id='top'>
             <div id='mainBox'>
-                <input type='password' label='Password' id='passwordBox'
-                    placeholder='Step 1: enter password here. Minimum 12 characters, though longer is better.'>
+                <div id='passwordForm'>
+                    <p id='passwordTitle'>Step 1: enter password here. Minimum 12 characters, though longer is better.</p>
+                    <input type='password' label='Password' id='passwordBox'>
+                </div>
 
                 <div id="buttonsBox">
                     <input type='file' id='encryptElem' hidden/>
@@ -48,7 +50,7 @@
             <p>
                 <b>Q:</b> How large of a file can I encrypt/decrypt?
                 <br>
-                <b>A:</b> Depends how much RAM is in your device. Cloaker has to keep the file in memory in encrypted <i>and</i> decrypted form until you navigate away from the page, so it does not work for large files on phones. (Come on, <a href='https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream#browser_compatibility'>FileSystemWritableFileStream</a>!) If you have a computer, use <a href='https://cloaker.spiegl.dev/'>Cloaker</a> which can handle arbitrarily large files.
+                <b>A:</b> Depends how much RAM is in your device. Cloaker has to keep the file in memory in until you navigate away from the page, so it does not work for large files on phones. (Come on, <a href='https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream#browser_compatibility'>FileSystemWritableFileStream</a>!) If you have a computer, use <a href='https://cloaker.spiegl.dev/'>Cloaker</a> which is faster and can handle arbitrarily large files.
             </p>
             <p>
                 <b>Q:</b> How does it encrypt/decrypt in a long-running operation without interrupting the UI?

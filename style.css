@@ -1,6 +1,5 @@
 #top {
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
     height: 60%;
@@ -16,18 +15,31 @@
     border: 5px solid black;
 }
 
-#passwordBox {
+#passwordForm {
+    margin: 20px;
     min-width: 75%;
+}
+
+#passwordTitle {
+    margin-bottom: 0px;
+}
+
+#passwordBox {
+    margin-top: 0px;
+    width: 100%;
 }
 
 #progressBar {
     min-width: 75%;
+    display: none;
+    margin: 20px;
 }
 
 #buttonsBox {
     display: flex;
     justify-content: space-around;
     width: 100%;
+    margin: 20px;
 }
 
 .button {
@@ -39,6 +51,10 @@
     border-radius: 10px;
     height: 75px;
     width: 25%;
+}
+
+#outputBox {
+    display: none;
 }
 
 #downloadLink {
@@ -54,4 +70,25 @@ p {
     font-size: 20px;
     line-height: 32px;
     margin-bottom: 30px;
+}
+
+.passwordError {
+    position: relative;
+    animation-name: passwordError;
+    animation-duration: 200ms;
+    animation-iteration-count: 5;
+    border: 2px solid red;
+    border-radius: 4px;
+}
+
+@keyframes passwordError {
+    0% { left: 0px; }
+    12% { left: 5px; }
+    25% { left: 10px; }
+    37% { left: 5px; }
+    50% { left: 0px; }
+    62% { right: 5px; }
+    75% { right: 10px; }
+    87% { right: 5px; }
+    100% { left: 0px; }
 }
