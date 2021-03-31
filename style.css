@@ -31,9 +31,9 @@
 }
 
 #progressBar {
-    min-width: 75%;
+    width: 100%;
     display: none;
-    margin: 20px;
+    margin-top: auto;
 }
 
 #buttonsBox {
@@ -60,6 +60,7 @@
 
 #downloadLink {
     display: none;
+    margin: 20px;
 }
 
 #bottom {

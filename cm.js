@@ -75,7 +75,6 @@ worker.onmessage = (message) => {
       updateProgress(message.data.progress);
       outputFilename = filename + '.cloaker';
       outFile = new File(outBuffers, outputFilename);
-      output('done');
       downloadLink = document.getElementById('downloadLink');
       downloadLink.download = filename + '.cloaker';
       downloadLink.href = URL.createObjectURL(outFile);
@@ -103,7 +102,6 @@ worker.onmessage = (message) => {
         }
       }
       outFile = new File(outBuffers, outputFilename);
-      output('done');
       downloadLink = document.getElementById('downloadLink');
       downloadLink.download = outputFilename;
       downloadLink.href = URL.createObjectURL(outFile);
@@ -123,7 +121,7 @@ startEncryption = async (inFile, password) => {
   inBuffer = await inFile.arrayBuffer();
   outBuffers = [new Uint8Array(SIGNATURE)];
   filename = inFile.name;
-  output(`filename: ${filename}, size: ${inBuffer.byteLength}`);
+  output(`Filename: ${filename}, size: ${inBuffer.byteLength}`);
   let salt = new Uint8Array(crypto_pwhash_argon2id_SALTBYTES);
   window.crypto.getRandomValues(salt);
   outBuffers.push(salt);
@@ -134,7 +132,7 @@ startDecryption = async (inFile, password) => {
   inBuffer = await inFile.arrayBuffer();
   outBuffers = [];
   filename = inFile.name;
-  output(`filename: ${filename}, size: ${inBuffer.byteLength}`);
+  output(`Filename: ${filename}, size: ${inBuffer.byteLength}`);
   worker.postMessage({ inBuffer, password, filename, command: 'startDecryption' }, [inBuffer]); // make sure to transfer inBuffer, not clone
 }
 
