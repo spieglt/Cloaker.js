@@ -41,7 +41,7 @@
     margin-top: auto;
 }
 
-#buttonsBox {
+#buttonsBox, #selectFileBox {
     display: flex;
     justify-content: space-around;
     width: 100%;

@@ -1,10 +1,31 @@
-const crypto_pwhash_argon2id_SALTBYTES = 16;
-const SIGNATURE = new Uint8Array([0xC1, 0x0A, 0x6B, 0xED]);
+// import * as c from './constants.js';
+let c = {
+  crypto_pwhash_argon2id_SALTBYTES: 16,
+  CHUNKSIZE: 1024 * 512,
+  LEGACY_CHUNKSIZE: 4096,
+  SIGNATURE: new Uint8Array([0xC1, 0x0A, 0x6B, 0xED]),
+  LEGACY_SIGNATURE: new Uint8Array([0xC1, 0x0A, 0x4B, 0xED]),
+  EXTENSION: '.cloaker',
+  START_ENCRYPTION: 'startEncryption',
+  ENCRYPT_CHUNK: 'encryptChunk',
+  ENCRYPTED_CHUNK: 'encryptedChunk',
+  START_DECRYPTION: 'startDecryption',
+  DECRYPT_CHUNK: 'decryptChunk',
+  DECRYPTED_CHUNK: 'decryptedChunk',
+  INITIALIZED_ENCRYPTION: 'initializedEncryption',
+  INITIALIZED_DECRYPTION: 'initializedDecryption',
+  FINAL_ENCRYPTION: 'finalEncryption',
+  FINAL_DECRYPTION: 'finalDecryption',
+  DECRYPTION_FAILED: 'decryptionFailed',
+  NOT_CLOAKER: 'notCloaker',
+};
 
 let startEncryption;
 let encryptChunk;
 let startDecryption;
 let decryptChunk;
+let selectFileButton;
+let selectFileElem;
 let encryptButton;
 let encryptElem;
 let decryptButton;
@@ -15,6 +36,8 @@ let outputBox;
 let progressBar;
 
 window.onload = () => {
+  selectFileButton = document.getElementById('selectFileButton');
+  selectFileElem = document.getElementById('selectFileElem');
   encryptButton = document.getElementById('encryptButton');
   encryptElem = document.getElementById('encryptElem');
   decryptButton = document.getElementById('decryptButton');
@@ -23,6 +46,26 @@ window.onload = () => {
   passwordBox = document.getElementById('passwordBox');
   outputBox = document.getElementById('outputBox');
   progressBar = document.getElementById('progressBar');
+
+  selectFileButton.onclick = () => {
+    selectFileElem.click();
+  };
+  selectFileElem.oninput = async () => {
+    // check extension. if .cloaker, decrypt. if not, check first four. if either signature, decrypt. if not, encrypt.
+    let inFile = selectFileElem.files[0];
+    let firstFour = await inFile.slice(0, 4).arrayBuffer();
+    firstFour = new Uint8Array(firstFour);
+    let hasSignature = compareArrays(firstFour, c.SIGNATURE)
+      || compareArrays(firstFour, c.LEGACY_SIGNATURE);
+    let decrypting = extensionIsCloaker(inFile.name) || hasSignature;
+    if (decrypting) {
+      encryptButton.style = 'display: hidden';
+      decryptButton.style = 'display: unset';
+    } else {
+      encryptButton.style = 'display: unset';
+      decryptButton.style = 'display: hidden';
+    }
+  }
 
   encryptButton.onclick = () => encryptElem.click();
 
@@ -47,6 +90,7 @@ window.onload = () => {
   decryptElem.oninput = () => {
     const password = passwordBox.value;
     startDecryption(decryptElem.files[0], password);
+    streamFile(decryptElem.files[0]);
   };
 };
 
@@ -57,39 +101,39 @@ let worker = new Worker('./worker.js');
 worker.onmessage = (message) => {
   // console.log('main received:', message);
   switch (message.data.response) {
-    case 'initializedEncryption':
+    case c.INITIALIZED_ENCRYPTION:
       outBuffers.push(message.data.header);
-      worker.postMessage({ command: 'encryptChunk' }); // kick off actual encryption
+      worker.postMessage({ command: c.ENCRYPT_CHUNK }); // kick off actual encryption
       break;
-    case 'encryptedChunk':
+    case c.ENCRYPTED_CHUNK:
       outBuffers.push(message.data.encryptedChunk);
       updateProgress(message.data.progress);
-      worker.postMessage({ command: 'encryptChunk' }); // next chunk
+      worker.postMessage({ command: c.ENCRYPT_CHUNK }); // next chunk
       break;
-    case 'finalEncryption':
+    case c.FINAL_ENCRYPTION:
       outBuffers.push(message.data.encryptedChunk);
       updateProgress(message.data.progress);
-      outputFilename = filename + '.cloaker';
+      outputFilename = filename + c.EXTENSION;
       outFile = new File(outBuffers, outputFilename);
       downloadLink = document.getElementById('downloadLink');
-      downloadLink.download = filename + '.cloaker';
+      downloadLink.download = filename + c.EXTENSION;
       downloadLink.href = URL.createObjectURL(outFile);
       downloadLink.innerText = `Download encrypted file "${outputFilename}"`
       downloadLink.style = 'display: unset';
       break;
-    case 'initializedDecryption':
-      worker.postMessage({ command: 'decryptChunk' }); // kick off decryption
+    case c.INITIALIZED_DECRYPTION:
+      worker.postMessage({ command: c.DECRYPT_CHUNK }); // kick off decryption
       break;
-    case 'decryptedChunk':
+    case c.DECRYPTED_CHUNK:
       outBuffers.push(message.data.decryptedChunk);
       updateProgress(message.data.progress);
-      worker.postMessage({ command: 'decryptChunk' });
+      worker.postMessage({ command: c.DECRYPT_CHUNK });
       break;
-    case 'finalDecryption':
+    case c.FINAL_DECRYPTION:
       outBuffers.push(message.data.decryptedChunk);
       updateProgress(message.data.progress);
       // if filename is longer than .cloaker and ends with .cloaker, chop off extension. if not, leave as is and let the user or OS decide.
-      let suffixes = ['.cloaker', '.cloaker.txt']; // Chrome on Android adds .cloaker.txt for some reason
+      let suffixes = [c.EXTENSION, c.EXTENSION + '.txt']; // Chrome on Android adds .cloaker.txt for some reason
       outputFilename = filename;
       for (i in suffixes) {
         let len = suffixes[i].length;
@@ -104,10 +148,10 @@ worker.onmessage = (message) => {
       downloadLink.innerText = `Download decrypted file "${outputFilename}"`
       downloadLink.style = 'display: unset';
       break;
-    case 'decryptionFailed':
+    case c.DECRYPTION_FAILED:
       output('incorrect password');
       break;
-    case 'notCloaker':
+    case c.NOT_CLOAKER:
       output('file was not encrypted with cloaker');
       break;
   }
@@ -115,21 +159,38 @@ worker.onmessage = (message) => {
 
 startEncryption = async (inFile, password) => {
   inBuffer = await inFile.arrayBuffer();
-  outBuffers = [new Uint8Array(SIGNATURE)];
+  outBuffers = [new Uint8Array(c.SIGNATURE)];
   filename = inFile.name;
   output(`Filename: ${filename}, size: ${inBuffer.byteLength}`);
-  let salt = new Uint8Array(crypto_pwhash_argon2id_SALTBYTES);
+  let salt = new Uint8Array(c.crypto_pwhash_argon2id_SALTBYTES);
   window.crypto.getRandomValues(salt);
   outBuffers.push(salt);
-  worker.postMessage({ inBuffer, password, salt, command: 'startEncryption' }, [inBuffer]); // make sure to transfer inBuffer, not clone
+  worker.postMessage({ inBuffer, password, salt, command: c.START_ENCRYPTION }, [inBuffer]); // make sure to transfer inBuffer, not clone
 }
+
+// as of now, we hand the entire input to the thread
+// when streaming, we hand the file handle to the thread
+const startEncryptionStreaming = async (inFile, password) => {
+  // console.log(inFile);
+
+  worker.postMessage({ inFile, password, salt, command: 'startEncryptionStreaming'});
+  // let offset = 0;
+  // while (offset < inFile.size) {
+  //   let chunkSize = Math.min(1024 * 512, inFile.size - offset);
+  //   let currentSlice = await inFile.slice(offset, offset + chunkSize).arrayBuffer();
+  //   console.log(currentSlice);
+  //   console.log(`len: ${currentSlice.len}, currentSlice: ${currentSlice}`);
+  //   offset += chunkSize;
+  // }
+}
+
 
 startDecryption = async (inFile, password) => {
   inBuffer = await inFile.arrayBuffer();
   outBuffers = [];
   filename = inFile.name;
   output(`Filename: ${filename}, size: ${inBuffer.byteLength}`);
-  worker.postMessage({ inBuffer, password, filename, command: 'startDecryption' }, [inBuffer]); // make sure to transfer inBuffer, not clone
+  worker.postMessage({ inBuffer, password, filename, command: c.START_DECRYPTION }, [inBuffer]); // make sure to transfer inBuffer, not clone
 }
 
 const output = (msg) => {
@@ -151,3 +212,29 @@ const updateProgress = (msg) => {
   }
   progressBar.value = msg;
 }
+
+const compareArrays = (a1, a2) => {
+  for (let i = 0; i < a1.length; i++) {
+    if (a1[i] != a2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+const extensionIsCloaker = (filename) => {
+  return filename.length > c.EXTENSION.length
+    && filename.slice(filename.length - c.EXTENSION.length, filename.length) === c.EXTENSION;
+}
+
+
+// things that need to change:
+// hand infile instead of inbuffer to worker
+// write to file instead of outbuffer
+// select file before starting
+// no download button
+
+// new flow?
+// 1. select input file
+// 2. display encrypt/decrypt button
+// 3. prefill output file
