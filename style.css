@@ -23,9 +23,10 @@
 #passwordForm {
     margin: 20px;
     min-width: 75%;
+    text-align: center;
 }
 
-#passwordTitle {
+#stepTitle {
     margin-bottom: 0px;
 }
 
@@ -41,11 +42,17 @@
     margin-top: auto;
 }
 
-#buttonsBox, #selectFileBox {
+#buttonsBox {
     display: flex;
     justify-content: space-around;
     width: 100%;
     margin: 20px;
+}
+
+#selectFileBox {
+    text-align: center;
+    width: 100%;
+    margin-top: 0px;
 }
 
 .button {
@@ -61,11 +68,6 @@
 
 #outputBox {
     display: none;
-}
-
-#downloadLink {
-    display: none;
-    margin: 20px;
 }
 
 #bottom {

@@ -1,25 +1,29 @@
-// import * as c from './constants.js';
-let c = {
-  crypto_pwhash_argon2id_SALTBYTES: 16,
-  CHUNKSIZE: 1024 * 512,
-  LEGACY_CHUNKSIZE: 4096,
-  SIGNATURE: new Uint8Array([0xC1, 0x0A, 0x6B, 0xED]),
-  LEGACY_SIGNATURE: new Uint8Array([0xC1, 0x0A, 0x4B, 0xED]),
-  EXTENSION: '.cloaker',
-  START_ENCRYPTION: 'startEncryption',
-  ENCRYPT_CHUNK: 'encryptChunk',
-  ENCRYPTED_CHUNK: 'encryptedChunk',
-  START_DECRYPTION: 'startDecryption',
-  DECRYPT_CHUNK: 'decryptChunk',
-  DECRYPTED_CHUNK: 'decryptedChunk',
-  INITIALIZED_ENCRYPTION: 'initializedEncryption',
-  INITIALIZED_DECRYPTION: 'initializedDecryption',
-  FINAL_ENCRYPTION: 'finalEncryption',
-  FINAL_DECRYPTION: 'finalDecryption',
-  DECRYPTION_FAILED: 'decryptionFailed',
-  NOT_CLOAKER: 'notCloaker',
-};
+import * as c from './constants.js';
+// let c = {
+//   crypto_pwhash_argon2id_SALTBYTES: 16,
+//   CHUNKSIZE: 1024 * 512,
+//   LEGACY_CHUNKSIZE: 4096,
+//   SIGNATURE: new Uint8Array([0xC1, 0x0A, 0x6B, 0xED]),
+//   LEGACY_SIGNATURE: new Uint8Array([0xC1, 0x0A, 0x4B, 0xED]),
+//   EXTENSION: '.cloaker',
+//   START_ENCRYPTION: 'startEncryption',
+//   ENCRYPT_CHUNK: 'encryptChunk',
+//   ENCRYPTED_CHUNK: 'encryptedChunk',
+//   START_DECRYPTION: 'startDecryption',
+//   DECRYPT_CHUNK: 'decryptChunk',
+//   DECRYPTED_CHUNK: 'decryptedChunk',
+//   INITIALIZED_ENCRYPTION: 'initializedEncryption',
+//   INITIALIZED_DECRYPTION: 'initializedDecryption',
+//   FINAL_ENCRYPTION: 'finalEncryption',
+//   FINAL_DECRYPTION: 'finalDecryption',
+//   DECRYPTION_FAILED: 'decryptionFailed',
+//   NOT_CLOAKER: 'notCloaker',
+// };
 
+let inFile;
+let filename;
+let outFile;
+let outFilename;
 let startEncryption;
 let encryptChunk;
 let startDecryption;
@@ -47,12 +51,9 @@ window.onload = () => {
   outputBox = document.getElementById('outputBox');
   progressBar = document.getElementById('progressBar');
 
-  selectFileButton.onclick = () => {
-    selectFileElem.click();
-  };
+  selectFileButton.onclick = () => selectFileElem.click();
   selectFileElem.oninput = async () => {
-    // check extension. if .cloaker, decrypt. if not, check first four. if either signature, decrypt. if not, encrypt.
-    let inFile = selectFileElem.files[0];
+    inFile = selectFileElem.files[0];
     let firstFour = await inFile.slice(0, 4).arrayBuffer();
     firstFour = new Uint8Array(firstFour);
     let hasSignature = compareArrays(firstFour, c.SIGNATURE)
@@ -65,11 +66,17 @@ window.onload = () => {
       encryptButton.style = 'display: unset';
       decryptButton.style = 'display: hidden';
     }
+
+    outFilename = decrypting
+      ? getDecryptFilename(inFile.name)
+      : inFile.name + c.EXTENSION;
+    output(`Output filename: ${outFilename}`);
   }
 
-  encryptButton.onclick = () => encryptElem.click();
-
-  encryptElem.oninput = () => {
+  encryptButton.onclick = async () => {
+    if (!inFile) {
+      output('Please select file.');
+    }
     const password = passwordBox.value;
     if (password.length < 12) {
       passwordBox.classList.add('passwordError');
@@ -82,20 +89,32 @@ window.onload = () => {
       }, 4000);
       return;
     }
-    startEncryption(encryptElem.files[0], password);
+    outFile = await window.showSaveFilePicker({
+      suggestedName: outFilename,
+      types: [{
+        description: 'Cloaker',
+        accept: {'application/cloaker': [c.EXTENSION]},
+      }],
+    });
+    startEncryption(inFile, password);
   };
 
-  decryptButton.onclick = () => decryptElem.click();
-
-  decryptElem.oninput = () => {
+  decryptButton.onclick = async () => {
+    if (!inFile) {
+      output('Please select file.');
+    }
     const password = passwordBox.value;
-    startDecryption(decryptElem.files[0], password);
-    streamFile(decryptElem.files[0]);
+    outFile = await window.showSaveFilePicker({
+      suggestedName: outFilename,
+      types: [{
+        description: 'Cloaker',
+        accept: {'application/cloaker': [c.EXTENSION]},
+      }],
+    });
+    startDecryption(inFile, password);
   };
 };
 
-
-let filename, inBuffer, outBuffers, outputFilename, outFile, downloadLink;
 let worker = new Worker('./worker.js');
 
 worker.onmessage = (message) => {
@@ -113,13 +132,7 @@ worker.onmessage = (message) => {
     case c.FINAL_ENCRYPTION:
       outBuffers.push(message.data.encryptedChunk);
       updateProgress(message.data.progress);
-      outputFilename = filename + c.EXTENSION;
-      outFile = new File(outBuffers, outputFilename);
-      downloadLink = document.getElementById('downloadLink');
-      downloadLink.download = filename + c.EXTENSION;
-      downloadLink.href = URL.createObjectURL(outFile);
-      downloadLink.innerText = `Download encrypted file "${outputFilename}"`
-      downloadLink.style = 'display: unset';
+      output(`Encryption of ${outFilename} complete.`);
       break;
     case c.INITIALIZED_DECRYPTION:
       worker.postMessage({ command: c.DECRYPT_CHUNK }); // kick off decryption
@@ -132,27 +145,13 @@ worker.onmessage = (message) => {
     case c.FINAL_DECRYPTION:
       outBuffers.push(message.data.decryptedChunk);
       updateProgress(message.data.progress);
-      // if filename is longer than .cloaker and ends with .cloaker, chop off extension. if not, leave as is and let the user or OS decide.
-      let suffixes = [c.EXTENSION, c.EXTENSION + '.txt']; // Chrome on Android adds .cloaker.txt for some reason
-      outputFilename = filename;
-      for (i in suffixes) {
-        let len = suffixes[i].length;
-        if (filename.length > len && filename.slice(filename.length - len, filename.length) === suffixes[i]) {
-          outputFilename = filename.slice(0, filename.length - len);
-        }
-      }
-      outFile = new File(outBuffers, outputFilename);
-      downloadLink = document.getElementById('downloadLink');
-      downloadLink.download = outputFilename;
-      downloadLink.href = URL.createObjectURL(outFile);
-      downloadLink.innerText = `Download decrypted file "${outputFilename}"`
-      downloadLink.style = 'display: unset';
+      output(`Decryption of ${outFilename} complete.`);      
       break;
     case c.DECRYPTION_FAILED:
-      output('incorrect password');
+      output('Incorrect password');
       break;
     case c.NOT_CLOAKER:
-      output('file was not encrypted with cloaker');
+      output('File was not encrypted with Cloaker');
       break;
   }
 };
@@ -227,6 +226,18 @@ const extensionIsCloaker = (filename) => {
     && filename.slice(filename.length - c.EXTENSION.length, filename.length) === c.EXTENSION;
 }
 
+const getDecryptFilename = (filename) => {
+  // if filename is longer than .cloaker and ends with .cloaker, chop off extension. if not, leave as is and let the user or OS decide.
+  let suffixes = [c.EXTENSION, c.EXTENSION + '.txt']; // Chrome on Android adds .cloaker.txt for some reason
+  let decryptFilename = filename;
+  for (let i in suffixes) {
+    let len = suffixes[i].length;
+    if (filename.length > len && filename.slice(filename.length - len, filename.length) === suffixes[i]) {
+      decryptFilename = filename.slice(0, filename.length - len);
+    }
+  }
+  return decryptFilename;
+}
 
 // things that need to change:
 // hand infile instead of inbuffer to worker
@@ -238,3 +249,6 @@ const extensionIsCloaker = (filename) => {
 // 1. select input file
 // 2. display encrypt/decrypt button
 // 3. prefill output file
+
+// check that file is selected before starting
+// set file to undefined at finish

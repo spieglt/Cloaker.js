@@ -2,7 +2,7 @@
     <meta charset='UTF-8'>
     <head>
         <title>Cloaker Mobile - File Encryption</title>
-        <script src='cloaker.js' type='text/javascript'></script>
+        <script src='cloaker.js' type='module'></script>
         <link rel='stylesheet' href='style.css'>
     </head>
     <body>
@@ -11,13 +11,13 @@
                 <img src='cloaker.svg' height='100px'>&nbsp;Cloaker
             </div>
             <div id='mainBox'>
-                <p id='passwordTitle'>Step 1:</p>
                 <div id='selectFileBox'>
+                    <p id='stepTitle'>Step 1:</p>
                     <input type='file' id='selectFileElem' hidden/>
                     <button id='selectFileButton' class='button'>Select File</button>
                 </div>
                 <div id='passwordForm'>
-                    <p id='passwordTitle'>Step 2: enter password here. Minimum 12 characters, though longer is better.</p>
+                    <p id='stepTitle'>Step 2: enter password here. Minimum 12 characters, though longer is better.</p>
                     <input type='password' label='Password' id='passwordBox'>
                 </div>
 
@@ -29,7 +29,6 @@
                 </div>
 
                 <div id='outputBox'></div>
-                <a href='' download id='downloadLink'>Download</a>
                 <progress id='progressBar' value=0 max=100></progress>
             </div>
         </div>
