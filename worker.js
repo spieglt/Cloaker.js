@@ -61,6 +61,7 @@ const hydrate = (sodium) => {
     inFile = message.data.inFile;
     let salt, header, key;
     let firstFour = await inFile.slice(0, 4).arrayBuffer();
+    firstFour = new Uint8Array(firstFour);
     if (compareArrays(firstFour, c.SIGNATURE)) {
       offset = 4; // skip signature
       salt = await inFile.slice(offset, offset + c.crypto_pwhash_argon2id_SALTBYTES).arrayBuffer();
@@ -78,6 +79,7 @@ const hydrate = (sodium) => {
       legacy = true;
       offset = compareArrays(firstFour, c.LEGACY_SIGNATURE) ? 4 : 0; // skip signature
       salt = await inFile.slice(offset, offset + sodium.crypto_pwhash_scryptsalsa208sha256_SALTBYTES).arrayBuffer();
+      salt = new Uint8Array(salt);
       offset += sodium.crypto_pwhash_scryptsalsa208sha256_SALTBYTES;
       header = await inFile.slice(offset, offset + sodium.crypto_secretstream_xchacha20poly1305_HEADERBYTES).arrayBuffer();
       header = new Uint8Array(header);

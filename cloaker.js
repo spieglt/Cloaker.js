@@ -1,34 +1,36 @@
 import * as c from './constants.js';
 
 let inFile;
+
+// check for FileSystem API
+let streaming = !!window.showSaveFilePicker;
+// used when streaming
 let outFile;
 let outHandle;
 let outStream;
+// used when not streaming
+let outBuffers;
+// writes encrypted/decrypted data to stream or the buffer to be downloaded
+let writeData;
+
+// these set up output and kick off worker.js
 let startEncryption;
 let startDecryption;
-let selectFileButton;
-let selectFileElem;
-let encryptButton;
-let encryptElem;
-let decryptButton;
-let decryptElem;
-let passwordTitle;
-let passwordBox;
-let outputBox;
-let progressBar;
-let streaming = !!window.showSaveFilePicker;
+
+let selectFileButton = document.getElementById('selectFileButton');
+let selectFileElem = document.getElementById('selectFileElem');
+let encryptButton = document.getElementById('encryptButton');
+let encryptElem = document.getElementById('encryptElem');
+let decryptButton = document.getElementById('decryptButton');
+let decryptElem = document.getElementById('decryptElem');
+let passwordTitle = document.getElementById('passwordTitle');
+let passwordBox = document.getElementById('passwordBox');
+let outputBox = document.getElementById('outputBox');
+let progressBar = document.getElementById('progressBar');
+let streamingSpan = document.getElementById('streamingSpan');
+let nonStreamingSpan = document.getElementById('nonStreamingSpan');
 
 window.onload = () => {
-  selectFileButton = document.getElementById('selectFileButton');
-  selectFileElem = document.getElementById('selectFileElem');
-  encryptButton = document.getElementById('encryptButton');
-  encryptElem = document.getElementById('encryptElem');
-  decryptButton = document.getElementById('decryptButton');
-  decryptElem = document.getElementById('decryptElem');
-  passwordTitle = document.getElementById('passwordTitle');
-  passwordBox = document.getElementById('passwordBox');
-  outputBox = document.getElementById('outputBox');
-  progressBar = document.getElementById('progressBar');
 
   selectFileButton.onclick = () => selectFileElem.click();
   selectFileElem.oninput = async () => {
@@ -45,13 +47,15 @@ window.onload = () => {
       encryptButton.style = 'display: unset';
       decryptButton.style = 'display: hidden';
     }
-    output(`File to ${decrypting ? "decrypt" : "encrypt"}: ${inFile.name}, size `);
+    output(`File to ${decrypting ? "decrypt" : "encrypt"}: ${inFile.name}, size: ${inFile.size}`);
   }
 
   encryptButton.onclick = async () => {
     if (!inFile) {
       output('Please select file.');
+      return;
     }
+    // check password
     const password = passwordBox.value;
     if (password.length < 12) {
       passwordBox.classList.add('passwordError');
@@ -64,67 +68,110 @@ window.onload = () => {
       }, 4000);
       return;
     }
-    outHandle = await window.showSaveFilePicker({
-      suggestedName: inFile.name + c.EXTENSION,
-      types: [{
-        description: 'Cloaker',
-        accept: {'application/cloaker': [c.EXTENSION]},
-      }],
-    });
-    outFile = await outHandle.getFile();
-    outStream = await outHandle.createWritable();
-    // output(`Output filename: ${outFile.name}`);
+    // set up file output
+    let name = inFile.name + c.EXTENSION;
+    if (streaming) {
+      outHandle = await window.showSaveFilePicker({
+        suggestedName: name,
+        types: [{
+          description: 'Cloaker',
+          accept: {'application/cloaker': [c.EXTENSION]},
+        }],
+      });
+      outFile = await outHandle.getFile();
+      outStream = await outHandle.createWritable();
+      name = outFile.name; // use whatever name user picked
+    }
+    output(`Output filename: ${outFile.name}`);
     startEncryption(inFile, password);
   };
 
   decryptButton.onclick = async () => {
     if (!inFile) {
       output('Please select file.');
+      return;
     }
     const password = passwordBox.value;
-    outHandle = await window.showSaveFilePicker({
-      suggestedName: getDecryptFilename(inFile.name),
-    });
-    outFile = await outHandle.getFile();
-    outStream = await outHandle.createWritable();
-    // output(`Output filename: ${outFile.name}`);
+    let name = getDecryptFilename(inFile.name);
+    if (streaming) {
+      outHandle = await window.showSaveFilePicker({
+        suggestedName: getDecryptFilename(inFile.name),
+      });
+      outFile = await outHandle.getFile();
+      outStream = await outHandle.createWritable();
+      name = outFile.name; // use whatever name user picked
+    }
+    output(`Output filename: ${name}`);
     startDecryption(inFile, password);
   };
+
+  if (streaming) {
+    streamingSpan.style = 'display: unset';
+    nonStreamingSpan.style = 'display: none';
+  } else {
+    streamingSpan.style = 'display: none';
+    nonStreamingSpan.style = 'display: unset';
+  }
 };
 
 let worker = new Worker('./worker.js');
 
 worker.onmessage = (message) => {
   // console.log('main received:', message);
+  let download, link, name;
   switch (message.data.response) {
     case c.INITIALIZED_ENCRYPTION:
-      outStream.write(message.data.header);
+      writeData(message.data.header);
       worker.postMessage({ command: c.ENCRYPT_CHUNK }); // kick off actual encryption
       break;
     case c.ENCRYPTED_CHUNK:
-      outStream.write(message.data.encryptedChunk);
+      writeData(message.data.encryptedChunk);
       updateProgress(message.data.progress);
       worker.postMessage({ command: c.ENCRYPT_CHUNK }); // next chunk
       break;
     case c.FINAL_ENCRYPTION:
-      outStream.write(message.data.encryptedChunk);
-      outStream.close();
+      writeData(message.data.encryptedChunk);
+      if (streaming) {
+        name = outFile.name;
+        outStream.close();
+      } else {
+        name = filename + '.cloaker';
+        download = new File(outBuffers, name);
+        link = document.getElementById('downloadLink');
+        link.download = name;
+        link.href = URL.createObjectURL(download);
+        link.innerText = `Download encrypted file "${name}"`
+        link.style = 'display: unset';
+      }
+      output(`Encryption of ${name} complete.`);
+      output();
       updateProgress(message.data.progress);
-      output(`Encryption of ${outFile.name} complete.`);
       break;
     case c.INITIALIZED_DECRYPTION:
       worker.postMessage({ command: c.DECRYPT_CHUNK }); // kick off decryption
       break;
     case c.DECRYPTED_CHUNK:
-      outStream.write(message.data.decryptedChunk);
+      writeData(message.data.decryptedChunk);
       updateProgress(message.data.progress);
       worker.postMessage({ command: c.DECRYPT_CHUNK });
       break;
     case c.FINAL_DECRYPTION:
-      outStream.write(message.data.decryptedChunk);
-      outStream.close();
+      writeData(message.data.decryptedChunk);
+      if (streaming) {
+        name = outFile.name;
+        outStream.close();
+      } else {
+        name = getDecryptFilename(inFile.name);
+        download = new File(outBuffers, name);
+        link = document.getElementById('downloadLink');
+        link.download = name;
+        link.href = URL.createObjectURL(download);
+        link.innerText = `Download decrypted file "${name}"`
+        link.style = 'display: unset';
+      }
       updateProgress(message.data.progress);
-      output(`Decryption of ${outFile.name} complete.`);
+      output(`Decryption of ${name} complete.`);
+      output();
       break;
     case c.DECRYPTION_FAILED:
       output('Incorrect password');
@@ -133,17 +180,33 @@ worker.onmessage = (message) => {
 };
 
 startEncryption = async (inFile, password) => {
-  outStream.write(c.SIGNATURE);
   output(`Filename: ${inFile.name}, size: ${inFile.size}`);
   let salt = new Uint8Array(c.crypto_pwhash_argon2id_SALTBYTES);
   window.crypto.getRandomValues(salt);
-  outStream.write(salt);
+  if (streaming) {
+    outStream.write(c.SIGNATURE);
+    outStream.write(salt);
+  } else {
+    outBuffers = [new Uint8Array(c.SIGNATURE)];
+    outBuffers.push(salt);
+  }
   worker.postMessage({ inFile, password, salt, command: c.START_ENCRYPTION });
 }
 
 startDecryption = async (inFile, password) => {
+  if (!streaming) {
+    outBuffers = [];
+  }
   output(`Filename: ${inFile.name}, size: ${inFile.size}`);
   worker.postMessage({ inFile, password, command: c.START_DECRYPTION });
+}
+
+writeData = (data) => {
+  if (streaming) {
+    outStream.write(data);
+  } else {
+    outBuffers.push(data);
+  }
 }
 
 const output = (msg) => {
@@ -196,23 +259,9 @@ const getDecryptFilename = (filename) => {
   return decryptFilename;
 }
 
-// things that need to change:
-// hand infile instead of inbuffer to worker
-// write to file instead of outbuffer
-// select file before starting
-// no download button
-// how to prompt user that they need to select output file? print "encrypting file x" after select file and then prompt again when clicking decrypt button
-
-// new flow?
-// 1. select input file
-// 2. display encrypt/decrypt button
-// 3. prefill output file
-
-// check that file is selected before starting
-// set file to undefined at finish
-
-// Test: new files, old files, legacy files, empty files, chrome, firefox, mobile
-
+// TODO:
+// drag and drop
 // show speed
 // show kb/mb/gb
-// to add firefox back in, don't have to worry about input, new streaming input is better. just need to add different output behavior, click different button? 
+// set file to undefined at finish
+// test: new files, old files, legacy files, empty files, chrome, firefox, mobile

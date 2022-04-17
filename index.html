@@ -12,12 +12,12 @@
             </div>
             <div id='mainBox'>
                 <div id='selectFileBox'>
-                    <p id='stepTitle'>Step 1:</p>
+                    <p class='step'>Step 1:</p>
                     <input type='file' id='selectFileElem' hidden/>
                     <button id='selectFileButton' class='button'>Select File</button>
                 </div>
                 <div id='passwordForm'>
-                    <p id='stepTitle'>Step 2: enter password here. Minimum 12 characters, though longer is better.</p>
+                    <p class='step' id='passwordTitle'>Step 2: enter password here. Minimum 12 characters, though longer is better.</p>
                     <input type='password' label='Password' id='passwordBox'>
                 </div>
 
@@ -29,6 +29,7 @@
                 </div>
 
                 <div id='outputBox'></div>
+                <a href='' download id='downloadLink'>Download</a>
                 <progress id='progressBar' value=0 max=100></progress>
             </div>
         </div>
@@ -57,7 +58,12 @@
             <p>
                 <b>Q:</b> How large of a file can I encrypt/decrypt?
                 <br>
-                <b>A:</b> It depends on how much RAM is in your device. Cloaker has to keep the file in memory in until you navigate away from the page, so it does not work for large files on phones. (Come on, <a href='https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream#browser_compatibility'>FileSystemWritableFileStream</a>! The <code>streamsaver</code> library can stream downloads from JS but uses service workers and I didn't want to go that way.) If you have a computer, use <a href='https://cloaker.spiegl.dev/'>Cloaker</a> which is faster, handles arbitrarily large files, and has cross-platform GUI and CLI versions.
+                <span id='nonStreamingSpan'>
+                    <b>A:</b> Since you're not using the desktop version of Chrome, it depends on how much RAM is in your device. Cloaker has to keep the encrypted or decrypted file in memory in until you save it and navigate away from the page, so it does not work for large files on phones. The required API: <a href='https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream#browser_compatibility'>FileSystemWritableFileStream</a>. If you have a computer, you can use <a href='https://cloaker.spiegl.dev/'>the desktop version of Cloaker</a> which is faster, handles arbitrarily large files, and has cross-platform GUI and CLI versions.
+                </span>
+                <span id='streamingSpan'>
+                    <b>A:</b> Since you're using the desktop version of Chrome which has <a href='https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream#browser_compatibility'>FileSystemWritableFileStream</a>, you can encrypt and decrypt arbitrarily large files.
+                </span>
             </p>
             <p>
                 <b>Q:</b> How does it encrypt/decrypt in a long-running operation without interrupting the UI?
