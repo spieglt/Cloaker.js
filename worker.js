@@ -17,17 +17,16 @@ let c = {
   FINAL_ENCRYPTION: 'finalEncryption',
   FINAL_DECRYPTION: 'finalDecryption',
   DECRYPTION_FAILED: 'decryptionFailed',
-  NOT_CLOAKER: 'notCloaker',
 };
 
 const hydrate = (sodium) => {
   console.log('sodium initialized in worker');
-  let state, inBuffer, offset;
+  let state, inFile, offset;
   let legacy = false;
 
   const startEncryption = (message) => {
     let { password, salt } = message.data;
-    inBuffer = new Uint8Array(message.data.inBuffer);
+    inFile = message.data.inFile;
     offset = 0;
 
     let key = sodium.crypto_pwhash(32, password, salt,
@@ -41,60 +40,61 @@ const hydrate = (sodium) => {
     postMessage({ response: c.INITIALIZED_ENCRYPTION, header });
   }
 
-  const encryptChunk = (message) => {
-    let chunkSize = Math.min(c.CHUNKSIZE, inBuffer.byteLength - offset);
-    let chunk = inBuffer.slice(offset, offset + chunkSize);
+  const encryptChunk = async (message) => {
+    let chunkSize = Math.min(c.CHUNKSIZE, inFile.size - offset);
+    let chunk = await inFile.slice(offset, offset + chunkSize).arrayBuffer();
+    chunk = new Uint8Array(chunk);
     offset += chunkSize;
-    let tag = offset < inBuffer.byteLength - 1
+    let tag = offset < inFile.size - 1
       ? sodium.crypto_secretstream_xchacha20poly1305_TAG_MESSAGE
       : sodium.crypto_secretstream_xchacha20poly1305_TAG_FINAL;
     const response = tag === sodium.crypto_secretstream_xchacha20poly1305_TAG_FINAL
       ? c.FINAL_ENCRYPTION
       : c.ENCRYPTED_CHUNK;
     const encryptedChunk = sodium.crypto_secretstream_xchacha20poly1305_push(state, chunk, null, tag);
-    const progress = ((offset/inBuffer.byteLength)*100).toFixed();
+    const progress = Math.floor((offset/inFile.size)*100);
     postMessage({ response, progress, encryptedChunk });
   }
 
-  const startDecryption = (message) => {
+  const startDecryption = async (message) => {
     let { password } = message.data;
-    inBuffer = new Uint8Array(message.data.inBuffer);
+    inFile = message.data.inFile;
     let salt, header, key;
-    if (compareArrays(inBuffer.slice(0, 4), c.SIGNATURE)) {
+    let firstFour = await inFile.slice(0, 4).arrayBuffer();
+    if (compareArrays(firstFour, c.SIGNATURE)) {
       offset = 4; // skip signature
-      salt = new Uint8Array(c.crypto_pwhash_argon2id_SALTBYTES);
-      salt.set(inBuffer.slice(offset, offset + c.crypto_pwhash_argon2id_SALTBYTES));
+      salt = await inFile.slice(offset, offset + c.crypto_pwhash_argon2id_SALTBYTES).arrayBuffer();
+      salt = new Uint8Array(salt);
       offset += c.crypto_pwhash_argon2id_SALTBYTES;
-      header = inBuffer.slice(offset, offset + sodium.crypto_secretstream_xchacha20poly1305_HEADERBYTES);
+      header = await inFile.slice(offset, offset + sodium.crypto_secretstream_xchacha20poly1305_HEADERBYTES).arrayBuffer();
+      header = new Uint8Array(header);
       offset += sodium.crypto_secretstream_xchacha20poly1305_HEADERBYTES;
       key = sodium.crypto_pwhash(32, password, salt,
         sodium.crypto_pwhash_OPSLIMIT_INTERACTIVE,
         sodium.crypto_pwhash_MEMLIMIT_INTERACTIVE,
         sodium.crypto_pwhash_ALG_ARGON2ID13
       );
-    } else if (compareArrays(inBuffer.slice(0, 4), c.LEGACY_SIGNATURE) || extensionIsCloaker(message.data.filename)) {
+    } else {
       legacy = true;
-      offset = compareArrays(inBuffer.slice(0, 4), c.LEGACY_SIGNATURE) ? 4 : 0; // skip signature
-      salt = new Uint8Array(sodium.crypto_pwhash_scryptsalsa208sha256_SALTBYTES);
-      salt.set(inBuffer.slice(offset, offset + sodium.crypto_pwhash_scryptsalsa208sha256_SALTBYTES));
+      offset = compareArrays(firstFour, c.LEGACY_SIGNATURE) ? 4 : 0; // skip signature
+      salt = await inFile.slice(offset, offset + sodium.crypto_pwhash_scryptsalsa208sha256_SALTBYTES).arrayBuffer();
       offset += sodium.crypto_pwhash_scryptsalsa208sha256_SALTBYTES;
-      header = inBuffer.slice(offset, offset + sodium.crypto_secretstream_xchacha20poly1305_HEADERBYTES);
+      header = await inFile.slice(offset, offset + sodium.crypto_secretstream_xchacha20poly1305_HEADERBYTES).arrayBuffer();
+      header = new Uint8Array(header);
       offset += sodium.crypto_secretstream_xchacha20poly1305_HEADERBYTES;
       key = sodium.crypto_pwhash_scryptsalsa208sha256(32, password, salt,
         sodium.crypto_pwhash_scryptsalsa208sha256_OPSLIMIT_INTERACTIVE, sodium.crypto_pwhash_scryptsalsa208sha256_MEMLIMIT_INTERACTIVE);
-    } else {
-      postMessage({ response: c.NOT_CLOAKER });
-      return;
     }
 
     state = sodium.crypto_secretstream_xchacha20poly1305_init_pull(header, key);
     postMessage({ response: c.INITIALIZED_DECRYPTION, header });
   }
 
-  const decryptChunk = (message) => {
+  const decryptChunk = async (message) => {
     let chunkSize = legacy ? c.LEGACY_CHUNKSIZE : c.CHUNKSIZE;
-    chunkSize = Math.min(chunkSize + sodium.crypto_secretstream_xchacha20poly1305_ABYTES, inBuffer.byteLength - offset);
-    let chunk = inBuffer.slice(offset, offset + chunkSize);
+    chunkSize = Math.min(chunkSize + sodium.crypto_secretstream_xchacha20poly1305_ABYTES, inFile.size - offset);
+    let chunk = await inFile.slice(offset, offset + chunkSize).arrayBuffer();
+    chunk = new Uint8Array(chunk);
     offset += chunkSize;
     let res = sodium.crypto_secretstream_xchacha20poly1305_pull(state, chunk);
     if (!res) {
@@ -102,7 +102,7 @@ const hydrate = (sodium) => {
       return;
     }
     let decryptedChunk = res.message;
-    const progress = ((offset/inBuffer.byteLength)*100).toFixed();
+    const progress = Math.floor((offset/inFile.size)*100);
     let response = res.tag === sodium.crypto_secretstream_xchacha20poly1305_TAG_FINAL
       ? c.FINAL_DECRYPTION
       : c.DECRYPTED_CHUNK;
@@ -131,15 +131,13 @@ self.sodium = { onload: hydrate };
 importScripts('./sodium.js');
 
 const compareArrays = (a1, a2) => {
+  if (!a1.length || a1.length != a2.length) {
+    return false;
+  }
   for (let i = 0; i < a1.length; i++) {
     if (a1[i] != a2[i]) {
       return false;
     }
   }
   return true;
-}
-
-const extensionIsCloaker = (filename) => {
-  return filename.length > c.EXTENSION.length
-    && filename.slice(filename.length - c.EXTENSION.length, filename.length) === c.EXTENSION;
 }

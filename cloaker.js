@@ -1,33 +1,11 @@
 import * as c from './constants.js';
-// let c = {
-//   crypto_pwhash_argon2id_SALTBYTES: 16,
-//   CHUNKSIZE: 1024 * 512,
-//   LEGACY_CHUNKSIZE: 4096,
-//   SIGNATURE: new Uint8Array([0xC1, 0x0A, 0x6B, 0xED]),
-//   LEGACY_SIGNATURE: new Uint8Array([0xC1, 0x0A, 0x4B, 0xED]),
-//   EXTENSION: '.cloaker',
-//   START_ENCRYPTION: 'startEncryption',
-//   ENCRYPT_CHUNK: 'encryptChunk',
-//   ENCRYPTED_CHUNK: 'encryptedChunk',
-//   START_DECRYPTION: 'startDecryption',
-//   DECRYPT_CHUNK: 'decryptChunk',
-//   DECRYPTED_CHUNK: 'decryptedChunk',
-//   INITIALIZED_ENCRYPTION: 'initializedEncryption',
-//   INITIALIZED_DECRYPTION: 'initializedDecryption',
-//   FINAL_ENCRYPTION: 'finalEncryption',
-//   FINAL_DECRYPTION: 'finalDecryption',
-//   DECRYPTION_FAILED: 'decryptionFailed',
-//   NOT_CLOAKER: 'notCloaker',
-// };
 
 let inFile;
-let filename;
 let outFile;
-let outFilename;
+let outHandle;
+let outStream;
 let startEncryption;
-let encryptChunk;
 let startDecryption;
-let decryptChunk;
 let selectFileButton;
 let selectFileElem;
 let encryptButton;
@@ -38,6 +16,7 @@ let passwordTitle;
 let passwordBox;
 let outputBox;
 let progressBar;
+let streaming = !!window.showSaveFilePicker;
 
 window.onload = () => {
   selectFileButton = document.getElementById('selectFileButton');
@@ -66,11 +45,7 @@ window.onload = () => {
       encryptButton.style = 'display: unset';
       decryptButton.style = 'display: hidden';
     }
-
-    outFilename = decrypting
-      ? getDecryptFilename(inFile.name)
-      : inFile.name + c.EXTENSION;
-    output(`Output filename: ${outFilename}`);
+    output(`File to ${decrypting ? "decrypt" : "encrypt"}: ${inFile.name}, size `);
   }
 
   encryptButton.onclick = async () => {
@@ -89,13 +64,16 @@ window.onload = () => {
       }, 4000);
       return;
     }
-    outFile = await window.showSaveFilePicker({
-      suggestedName: outFilename,
+    outHandle = await window.showSaveFilePicker({
+      suggestedName: inFile.name + c.EXTENSION,
       types: [{
         description: 'Cloaker',
         accept: {'application/cloaker': [c.EXTENSION]},
       }],
     });
+    outFile = await outHandle.getFile();
+    outStream = await outHandle.createWritable();
+    // output(`Output filename: ${outFile.name}`);
     startEncryption(inFile, password);
   };
 
@@ -104,13 +82,12 @@ window.onload = () => {
       output('Please select file.');
     }
     const password = passwordBox.value;
-    outFile = await window.showSaveFilePicker({
-      suggestedName: outFilename,
-      types: [{
-        description: 'Cloaker',
-        accept: {'application/cloaker': [c.EXTENSION]},
-      }],
+    outHandle = await window.showSaveFilePicker({
+      suggestedName: getDecryptFilename(inFile.name),
     });
+    outFile = await outHandle.getFile();
+    outStream = await outHandle.createWritable();
+    // output(`Output filename: ${outFile.name}`);
     startDecryption(inFile, password);
   };
 };
@@ -121,75 +98,52 @@ worker.onmessage = (message) => {
   // console.log('main received:', message);
   switch (message.data.response) {
     case c.INITIALIZED_ENCRYPTION:
-      outBuffers.push(message.data.header);
+      outStream.write(message.data.header);
       worker.postMessage({ command: c.ENCRYPT_CHUNK }); // kick off actual encryption
       break;
     case c.ENCRYPTED_CHUNK:
-      outBuffers.push(message.data.encryptedChunk);
+      outStream.write(message.data.encryptedChunk);
       updateProgress(message.data.progress);
       worker.postMessage({ command: c.ENCRYPT_CHUNK }); // next chunk
       break;
     case c.FINAL_ENCRYPTION:
-      outBuffers.push(message.data.encryptedChunk);
+      outStream.write(message.data.encryptedChunk);
+      outStream.close();
       updateProgress(message.data.progress);
-      output(`Encryption of ${outFilename} complete.`);
+      output(`Encryption of ${outFile.name} complete.`);
       break;
     case c.INITIALIZED_DECRYPTION:
       worker.postMessage({ command: c.DECRYPT_CHUNK }); // kick off decryption
       break;
     case c.DECRYPTED_CHUNK:
-      outBuffers.push(message.data.decryptedChunk);
+      outStream.write(message.data.decryptedChunk);
       updateProgress(message.data.progress);
       worker.postMessage({ command: c.DECRYPT_CHUNK });
       break;
     case c.FINAL_DECRYPTION:
-      outBuffers.push(message.data.decryptedChunk);
+      outStream.write(message.data.decryptedChunk);
+      outStream.close();
       updateProgress(message.data.progress);
-      output(`Decryption of ${outFilename} complete.`);      
+      output(`Decryption of ${outFile.name} complete.`);
       break;
     case c.DECRYPTION_FAILED:
       output('Incorrect password');
-      break;
-    case c.NOT_CLOAKER:
-      output('File was not encrypted with Cloaker');
       break;
   }
 };
 
 startEncryption = async (inFile, password) => {
-  inBuffer = await inFile.arrayBuffer();
-  outBuffers = [new Uint8Array(c.SIGNATURE)];
-  filename = inFile.name;
-  output(`Filename: ${filename}, size: ${inBuffer.byteLength}`);
+  outStream.write(c.SIGNATURE);
+  output(`Filename: ${inFile.name}, size: ${inFile.size}`);
   let salt = new Uint8Array(c.crypto_pwhash_argon2id_SALTBYTES);
   window.crypto.getRandomValues(salt);
-  outBuffers.push(salt);
-  worker.postMessage({ inBuffer, password, salt, command: c.START_ENCRYPTION }, [inBuffer]); // make sure to transfer inBuffer, not clone
+  outStream.write(salt);
+  worker.postMessage({ inFile, password, salt, command: c.START_ENCRYPTION });
 }
-
-// as of now, we hand the entire input to the thread
-// when streaming, we hand the file handle to the thread
-const startEncryptionStreaming = async (inFile, password) => {
-  // console.log(inFile);
-
-  worker.postMessage({ inFile, password, salt, command: 'startEncryptionStreaming'});
-  // let offset = 0;
-  // while (offset < inFile.size) {
-  //   let chunkSize = Math.min(1024 * 512, inFile.size - offset);
-  //   let currentSlice = await inFile.slice(offset, offset + chunkSize).arrayBuffer();
-  //   console.log(currentSlice);
-  //   console.log(`len: ${currentSlice.len}, currentSlice: ${currentSlice}`);
-  //   offset += chunkSize;
-  // }
-}
-
 
 startDecryption = async (inFile, password) => {
-  inBuffer = await inFile.arrayBuffer();
-  outBuffers = [];
-  filename = inFile.name;
-  output(`Filename: ${filename}, size: ${inBuffer.byteLength}`);
-  worker.postMessage({ inBuffer, password, filename, command: c.START_DECRYPTION }, [inBuffer]); // make sure to transfer inBuffer, not clone
+  output(`Filename: ${inFile.name}, size: ${inFile.size}`);
+  worker.postMessage({ inFile, password, command: c.START_DECRYPTION });
 }
 
 const output = (msg) => {
@@ -207,12 +161,15 @@ const updateProgress = (msg) => {
     progressBar.style = 'display: unset';
   }
   if (!(typeof msg === 'number')) {
-    msg = 100; // if empty file, we divided by 0 in worker, so msg will be NaN
+    console.log(typeof msg, msg);
   }
   progressBar.value = msg;
 }
 
 const compareArrays = (a1, a2) => {
+  if (!a1.length || a1.length != a2.length) {
+    return false;
+  }
   for (let i = 0; i < a1.length; i++) {
     if (a1[i] != a2[i]) {
       return false;
@@ -244,6 +201,7 @@ const getDecryptFilename = (filename) => {
 // write to file instead of outbuffer
 // select file before starting
 // no download button
+// how to prompt user that they need to select output file? print "encrypting file x" after select file and then prompt again when clicking decrypt button
 
 // new flow?
 // 1. select input file
@@ -252,3 +210,9 @@ const getDecryptFilename = (filename) => {
 
 // check that file is selected before starting
 // set file to undefined at finish
+
+// Test: new files, old files, legacy files, empty files, chrome, firefox, mobile
+
+// show speed
+// show kb/mb/gb
+// to add firefox back in, don't have to worry about input, new streaming input is better. just need to add different output behavior, click different button? 

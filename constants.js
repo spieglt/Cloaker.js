@@ -16,4 +16,3 @@ export const INITIALIZED_DECRYPTION = 'initializedDecryption';
 export const FINAL_ENCRYPTION = 'finalEncryption';
 export const FINAL_DECRYPTION = 'finalDecryption';
 export const DECRYPTION_FAILED = 'decryptionFailed';
-export const NOT_CLOAKER = 'notCloaker';
