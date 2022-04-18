@@ -30,6 +30,7 @@
 
                 <div id='outputBox'></div>
                 <a href='' download id='downloadLink'>Download</a>
+                <span id='speed'>Speed: too quick to be worth measuring</span>
                 <progress id='progressBar' value=0 max=100></progress>
             </div>
         </div>
@@ -59,7 +60,7 @@
                 <b>Q:</b> How large of a file can I encrypt/decrypt?
                 <br>
                 <span id='nonStreamingSpan'>
-                    <b>A:</b> Since you're not using the desktop version of Chrome, it depends on how much RAM is in your device. Cloaker has to keep the encrypted or decrypted file in memory in until you save it and navigate away from the page, so it does not work for large files on phones. The required API: <a href='https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream#browser_compatibility'>FileSystemWritableFileStream</a>. If you have a computer, you can use <a href='https://cloaker.spiegl.dev/'>the desktop version of Cloaker</a> which is faster, handles arbitrarily large files, and has cross-platform GUI and CLI versions.
+                    <b>A:</b> Since you're not using the desktop version of Chrome, it depends on how much RAM is in your device. In browsers without <a href='https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream#browser_compatibility'>FileSystemWritableFileStream</a>, Cloaker has to keep the encrypted or decrypted file in memory in until you save it and navigate away from the page, so it does not work for large files on phones. If you have a computer, you can use <a href='https://cloaker.spiegl.dev/'>the desktop version of Cloaker</a> which is faster, handles arbitrarily large files, and has cross-platform GUI and CLI versions.
                 </span>
                 <span id='streamingSpan'>
                     <b>A:</b> Since you're using the desktop version of Chrome which has <a href='https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream#browser_compatibility'>FileSystemWritableFileStream</a>, you can encrypt and decrypt arbitrarily large files.

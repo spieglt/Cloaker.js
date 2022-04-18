@@ -53,7 +53,7 @@ const hydrate = (sodium) => {
       : c.ENCRYPTED_CHUNK;
     const encryptedChunk = sodium.crypto_secretstream_xchacha20poly1305_push(state, chunk, null, tag);
     const progress = Math.floor((offset/inFile.size)*100);
-    postMessage({ response, progress, encryptedChunk });
+    postMessage({ response, progress, encryptedChunk, bytesWritten: offset });
   }
 
   const startDecryption = async (message) => {
@@ -108,7 +108,7 @@ const hydrate = (sodium) => {
     let response = res.tag === sodium.crypto_secretstream_xchacha20poly1305_TAG_FINAL
       ? c.FINAL_DECRYPTION
       : c.DECRYPTED_CHUNK;
-    postMessage({ response, progress, decryptedChunk });
+    postMessage({ response, progress, decryptedChunk, bytesWritten: offset });
   }
 
   onmessage = (message) => {

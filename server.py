@@ -1,5 +1,4 @@
 import http.server
-import socketserver
 
 PORT = 8000
 
@@ -8,10 +7,10 @@ class HttpRequestHandler(http.server.SimpleHTTPRequestHandler):
         '.js':'application/javascript',
     }
 
-httpd = socketserver.TCPServer(("localhost", PORT), HttpRequestHandler)
+httpd = http.server.HTTPServer(('', 8000), HttpRequestHandler)
 
 try:
-    print(f"serving at http://localhost:{PORT}")
+    print(f'serving at http://localhost:{PORT}')
     httpd.serve_forever()
 except KeyboardInterrupt:
     pass

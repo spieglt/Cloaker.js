@@ -27,8 +27,14 @@ let passwordTitle = document.getElementById('passwordTitle');
 let passwordBox = document.getElementById('passwordBox');
 let outputBox = document.getElementById('outputBox');
 let progressBar = document.getElementById('progressBar');
+let speedSpan = document.getElementById('speed');
 let streamingSpan = document.getElementById('streamingSpan');
 let nonStreamingSpan = document.getElementById('nonStreamingSpan');
+
+let startTime;
+let progress;
+let speed;
+let progressInterval;
 
 window.onload = () => {
 
@@ -47,7 +53,7 @@ window.onload = () => {
       encryptButton.style = 'display: unset';
       decryptButton.style = 'display: hidden';
     }
-    output(`File to ${decrypting ? "decrypt" : "encrypt"}: ${inFile.name}, size: ${inFile.size}`);
+    output(`File to ${decrypting ? "decrypt" : "encrypt"}: ${inFile.name}, size: ${getHumanReadableFileSize(inFile.size)}`);
   }
 
   encryptButton.onclick = async () => {
@@ -82,7 +88,7 @@ window.onload = () => {
       outStream = await outHandle.createWritable();
       name = outFile.name; // use whatever name user picked
     }
-    output(`Output filename: ${outFile.name}`);
+    output(`Output filename: ${name}`);
     startEncryption(inFile, password);
   };
 
@@ -118,15 +124,18 @@ let worker = new Worker('./worker.js');
 
 worker.onmessage = (message) => {
   // console.log('main received:', message);
-  let download, link, name;
+  let bytesPerSecond, download, link, name;
   switch (message.data.response) {
     case c.INITIALIZED_ENCRYPTION:
+      launchProgress();
       writeData(message.data.header);
       worker.postMessage({ command: c.ENCRYPT_CHUNK }); // kick off actual encryption
       break;
     case c.ENCRYPTED_CHUNK:
       writeData(message.data.encryptedChunk);
-      updateProgress(message.data.progress);
+      bytesPerSecond = message.data.bytesWritten / ((Date.now() - startTime) / 1000);
+      speed = getHumanReadableFileSize(bytesPerSecond) + '/sec';
+      progress = message.data.progress;
       worker.postMessage({ command: c.ENCRYPT_CHUNK }); // next chunk
       break;
     case c.FINAL_ENCRYPTION:
@@ -135,7 +144,7 @@ worker.onmessage = (message) => {
         name = outFile.name;
         outStream.close();
       } else {
-        name = filename + '.cloaker';
+        name = inFile.name + c.EXTENSION;
         download = new File(outBuffers, name);
         link = document.getElementById('downloadLink');
         link.download = name;
@@ -145,14 +154,18 @@ worker.onmessage = (message) => {
       }
       output(`Encryption of ${name} complete.`);
       output();
-      updateProgress(message.data.progress);
+      progressBar.value = message.data.progress;
+      clearInterval(progressInterval);
       break;
     case c.INITIALIZED_DECRYPTION:
+      launchProgress();
       worker.postMessage({ command: c.DECRYPT_CHUNK }); // kick off decryption
       break;
     case c.DECRYPTED_CHUNK:
       writeData(message.data.decryptedChunk);
-      updateProgress(message.data.progress);
+      bytesPerSecond = message.data.bytesWritten / ((Date.now() - startTime) / 1000);
+      speed = getHumanReadableFileSize(bytesPerSecond) + '/sec';
+      progress = message.data.progress;
       worker.postMessage({ command: c.DECRYPT_CHUNK });
       break;
     case c.FINAL_DECRYPTION:
@@ -169,9 +182,10 @@ worker.onmessage = (message) => {
         link.innerText = `Download decrypted file "${name}"`
         link.style = 'display: unset';
       }
-      updateProgress(message.data.progress);
       output(`Decryption of ${name} complete.`);
       output();
+      progressBar.value = message.data.progress;
+      clearInterval(progressInterval);
       break;
     case c.DECRYPTION_FAILED:
       output('Incorrect password');
@@ -180,7 +194,7 @@ worker.onmessage = (message) => {
 };
 
 startEncryption = async (inFile, password) => {
-  output(`Filename: ${inFile.name}, size: ${inFile.size}`);
+  startTime = Date.now();
   let salt = new Uint8Array(c.crypto_pwhash_argon2id_SALTBYTES);
   window.crypto.getRandomValues(salt);
   if (streaming) {
@@ -197,7 +211,6 @@ startDecryption = async (inFile, password) => {
   if (!streaming) {
     outBuffers = [];
   }
-  output(`Filename: ${inFile.name}, size: ${inFile.size}`);
   worker.postMessage({ inFile, password, command: c.START_DECRYPTION });
 }
 
@@ -219,14 +232,13 @@ const output = (msg) => {
   outputBox.appendChild(document.createElement('br'));
 }
 
-const updateProgress = (msg) => {
-  if (window.getComputedStyle(progressBar).display === 'none') {
-    progressBar.style = 'display: unset';
-  }
-  if (!(typeof msg === 'number')) {
-    console.log(typeof msg, msg);
-  }
-  progressBar.value = msg;
+const launchProgress = () => {
+  speedSpan.style = 'display: unset';
+  progressBar.style = 'display: unset';
+  progressInterval = setInterval( () => {
+    speedSpan.textContent = 'Speed: ' + speed;
+    progressBar.value = progress;
+  }, 250);
 }
 
 const compareArrays = (a1, a2) => {
@@ -259,9 +271,22 @@ const getDecryptFilename = (filename) => {
   return decryptFilename;
 }
 
+const getHumanReadableFileSize = (size) => {
+  if (size < 1000) {
+    return size.toFixed(0) + ' bytes';
+  } else if (size < 1000000) {
+    return (size/1000).toFixed(2) + 'KB';
+  } else if (size < 1000000000) {
+    return (size/1000000).toFixed(2) + 'MB';
+  } else if (size < 1000000000000) {
+    return (size/1000000000).toFixed(2) + 'GB';
+  } else {
+    return (size/1000000000000).toFixed(2) + 'TB';
+  }
+}
+
 // TODO:
 // drag and drop
-// show speed
-// show kb/mb/gb
 // set file to undefined at finish
 // test: new files, old files, legacy files, empty files, chrome, firefox, mobile
+// add hashes?
