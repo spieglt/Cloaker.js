@@ -189,6 +189,7 @@ worker.onmessage = (message) => {
       break;
     case c.DECRYPTION_FAILED:
       output('Incorrect password');
+      clearInterval(progressInterval);
       break;
   }
 };
@@ -208,6 +209,7 @@ startEncryption = async (inFile, password) => {
 }
 
 startDecryption = async (inFile, password) => {
+  startTime = Date.now();
   if (!streaming) {
     outBuffers = [];
   }
