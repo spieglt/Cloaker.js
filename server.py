@@ -4,7 +4,7 @@ PORT = 8000
 
 class HttpRequestHandler(http.server.SimpleHTTPRequestHandler):
     extensions_map = {
-        '.js':'application/javascript',
+        '.js': 'application/javascript',
     }
 
 httpd = http.server.HTTPServer(('', 8000), HttpRequestHandler)

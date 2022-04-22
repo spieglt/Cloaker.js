@@ -30,7 +30,7 @@
 
 **Q:** How large of a file can I encrypt/decrypt?
 
-**A:** Depends how much RAM is in your device. Cloaker has to keep the file in memory in until you navigate away from the page, so it does not work for large files on phones. (Come on, <a href='https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream#browser_compatibility'>FileSystemWritableFileStream</a>! The `streamsaver` library can stream downloads from JS but uses service workers and I didn't want to go that way.) If you have a computer, use <a href='https://cloaker.spiegl.dev/'>Cloaker</a> which is faster, handles arbitrarily large files, and has cross-platform GUI and CLI versions.
+**A:** If you don't use the desktop version of Chrome, it depends on how much RAM is in your device. In browsers without <a href='https://developer.mozilla.org/en-US/docs/Web/API/FileSystemWritableFileStream#browser_compatibility'>FileSystemWritableFileStream</a>, Cloaker has to keep the encrypted or decrypted file in memory in until you save it and navigate away from the page, so it does not work for large files on phones. If you have a computer, you can use <a href='https://cloaker.spiegl.dev/'>the desktop version of Cloaker</a> which is faster, handles arbitrarily large files, and has cross-platform GUI and CLI versions. On the desktop version of Chrome, however, you can encrypt and decrypt arbitrarily large files as the output will stream to your filesystem.
 
 --------------------
 **Q:** How does it encrypt/decrypt in a long-running operation without interrupting the UI?

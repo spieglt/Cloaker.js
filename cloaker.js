@@ -284,9 +284,3 @@ const getHumanReadableFileSize = (size) => {
     return (size/1000000000000).toFixed(2) + 'TB';
   }
 }
-
-// TODO:
-// drag and drop
-// set file to undefined at finish
-// test: new files, old files, legacy files, empty files, chrome, firefox, mobile
-// add hashes?
