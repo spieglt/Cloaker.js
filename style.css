@@ -20,6 +20,23 @@
     min-height: 400px;
 }
 
+#mainBox.dragging {
+    background-color: LightGray;
+}
+
+#dropHint {
+    font-size: 16px;
+    margin-top: 8px;
+    margin-bottom: 0px;
+}
+
+/* touch devices can't drag files in */
+@media (hover: none) {
+    #dropHint {
+        display: none;
+    }
+}
+
 #passwordForm {
     margin: 20px;
     min-width: 75%;
