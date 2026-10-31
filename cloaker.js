@@ -17,6 +17,7 @@ let writeData;
 let startEncryption;
 let startDecryption;
 
+let mainBox = document.getElementById('mainBox');
 let selectFileButton = document.getElementById('selectFileButton');
 let selectFileElem = document.getElementById('selectFileElem');
 let encryptButton = document.getElementById('encryptButton');
@@ -35,26 +36,73 @@ let startTime;
 let progress;
 let speed;
 let progressInterval;
+// true while a file is being encrypted or decrypted
+let busy = false;
+
+const selectFile = async (file) => {
+  if (busy) {
+    output('Please wait for the current file to finish.');
+    return;
+  }
+  inFile = file;
+  let firstFour = await inFile.slice(0, 4).arrayBuffer();
+  firstFour = new Uint8Array(firstFour);
+  let hasSignature = compareArrays(firstFour, c.SIGNATURE)
+    || compareArrays(firstFour, c.LEGACY_SIGNATURE);
+  let decrypting = extensionIsCloaker(inFile.name) || hasSignature;
+  if (decrypting) {
+    encryptButton.style = 'display: hidden';
+    decryptButton.style = 'display: unset';
+  } else {
+    encryptButton.style = 'display: unset';
+    decryptButton.style = 'display: hidden';
+  }
+  output(`File to ${decrypting ? "decrypt" : "encrypt"}: ${inFile.name}, size: ${getHumanReadableFileSize(inFile.size)}`);
+}
+
+// a file dropped anywhere outside mainBox would otherwise make the browser open it
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', (e) => e.preventDefault());
+
+// dragenter/dragleave also fire when crossing mainBox's children, so count them
+let dragDepth = 0;
+mainBox.ondragenter = () => {
+  dragDepth++;
+  mainBox.classList.add('dragging');
+};
+mainBox.ondragleave = () => {
+  if (--dragDepth === 0) {
+    mainBox.classList.remove('dragging');
+  }
+};
+mainBox.ondrop = (e) => {
+  dragDepth = 0;
+  mainBox.classList.remove('dragging');
+  const files = e.dataTransfer.files;
+  if (files.length === 0) {
+    return;
+  }
+  if (files.length > 1) {
+    output('Please drop one file at a time.');
+    return;
+  }
+  // webkitGetAsEntry only works during the drop event, so check before any await
+  const entry = e.dataTransfer.items[0]?.webkitGetAsEntry?.();
+  if (entry?.isDirectory) {
+    output('Folders cannot be encrypted. Please drop a single file, or zip the folder first.');
+    return;
+  }
+  selectFile(files[0]);
+};
 
 window.onload = () => {
 
   selectFileButton.onclick = () => selectFileElem.click();
-  selectFileElem.oninput = async () => {
-    inFile = selectFileElem.files[0];
-    let firstFour = await inFile.slice(0, 4).arrayBuffer();
-    firstFour = new Uint8Array(firstFour);
-    let hasSignature = compareArrays(firstFour, c.SIGNATURE)
-      || compareArrays(firstFour, c.LEGACY_SIGNATURE);
-    let decrypting = extensionIsCloaker(inFile.name) || hasSignature;
-    if (decrypting) {
-      encryptButton.style = 'display: hidden';
-      decryptButton.style = 'display: unset';
-    } else {
-      encryptButton.style = 'display: unset';
-      decryptButton.style = 'display: hidden';
-    }
-    output(`File to ${decrypting ? "decrypt" : "encrypt"}: ${inFile.name}, size: ${getHumanReadableFileSize(inFile.size)}`);
-  }
+  selectFileElem.oninput = () => {
+    selectFile(selectFileElem.files[0]);
+    // otherwise picking the same file again after a drop wouldn't fire oninput
+    selectFileElem.value = '';
+  };
 
   encryptButton.onclick = async () => {
     if (!inFile) {
@@ -156,6 +204,7 @@ worker.onmessage = (message) => {
       output();
       progressBar.value = message.data.progress;
       clearInterval(progressInterval);
+      busy = false;
       break;
     case c.INITIALIZED_DECRYPTION:
       launchProgress();
@@ -186,16 +235,19 @@ worker.onmessage = (message) => {
       output();
       progressBar.value = message.data.progress;
       clearInterval(progressInterval);
+      busy = false;
       break;
     case c.DECRYPTION_FAILED:
       // once a chunk has decrypted, the password is right and the file is damaged
       output(message.data.wrongPassword ? 'Incorrect password' : 'File is truncated or corrupt');
       clearInterval(progressInterval);
+      busy = false;
       break;
   }
 };
 
 startEncryption = async (inFile, password) => {
+  busy = true;
   startTime = Date.now();
   let salt = new Uint8Array(c.crypto_pwhash_argon2id_SALTBYTES);
   window.crypto.getRandomValues(salt);
@@ -210,6 +262,7 @@ startEncryption = async (inFile, password) => {
 }
 
 startDecryption = async (inFile, password) => {
+  busy = true;
   startTime = Date.now();
   if (!streaming) {
     outBuffers = [];
