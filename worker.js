@@ -21,7 +21,7 @@ let c = {
 
 const hydrate = (sodium) => {
   console.log('sodium initialized in worker');
-  let state, inFile, offset;
+  let state, inFile, offset, chunksRead;
   let legacy = false;
 
   const startEncryption = (message) => {
@@ -45,7 +45,7 @@ const hydrate = (sodium) => {
     let chunk = await inFile.slice(offset, offset + chunkSize).arrayBuffer();
     chunk = new Uint8Array(chunk);
     offset += chunkSize;
-    let tag = offset < inFile.size - 1
+    let tag = offset < inFile.size
       ? sodium.crypto_secretstream_xchacha20poly1305_TAG_MESSAGE
       : sodium.crypto_secretstream_xchacha20poly1305_TAG_FINAL;
     const response = tag === sodium.crypto_secretstream_xchacha20poly1305_TAG_FINAL
@@ -89,6 +89,7 @@ const hydrate = (sodium) => {
     }
 
     state = sodium.crypto_secretstream_xchacha20poly1305_init_pull(header, key);
+    chunksRead = 0;
     postMessage({ response: c.INITIALIZED_DECRYPTION, header });
   }
 
@@ -98,11 +99,18 @@ const hydrate = (sodium) => {
     let chunk = await inFile.slice(offset, offset + chunkSize).arrayBuffer();
     chunk = new Uint8Array(chunk);
     offset += chunkSize;
-    let res = sodium.crypto_secretstream_xchacha20poly1305_pull(state, chunk);
+    let res;
+    try {
+      // throws rather than returning false when the file ends before the final chunk
+      res = sodium.crypto_secretstream_xchacha20poly1305_pull(state, chunk);
+    } catch (e) {
+      res = false;
+    }
     if (!res) {
-      postMessage({ response: c.DECRYPTION_FAILED });
+      postMessage({ response: c.DECRYPTION_FAILED, wrongPassword: chunksRead === 0 });
       return;
     }
+    chunksRead++;
     let decryptedChunk = res.message;
     const progress = Math.floor((offset/inFile.size)*100);
     let response = res.tag === sodium.crypto_secretstream_xchacha20poly1305_TAG_FINAL
