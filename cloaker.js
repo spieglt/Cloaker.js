@@ -188,7 +188,8 @@ worker.onmessage = (message) => {
       clearInterval(progressInterval);
       break;
     case c.DECRYPTION_FAILED:
-      output('Incorrect password');
+      // once a chunk has decrypted, the password is right and the file is damaged
+      output(message.data.wrongPassword ? 'Incorrect password' : 'File is truncated or corrupt');
       clearInterval(progressInterval);
       break;
   }
