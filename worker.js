@@ -45,7 +45,7 @@ const hydrate = (sodium) => {
     let chunk = await inFile.slice(offset, offset + chunkSize).arrayBuffer();
     chunk = new Uint8Array(chunk);
     offset += chunkSize;
-    let tag = offset < inFile.size - 1
+    let tag = offset < inFile.size
       ? sodium.crypto_secretstream_xchacha20poly1305_TAG_MESSAGE
       : sodium.crypto_secretstream_xchacha20poly1305_TAG_FINAL;
     const response = tag === sodium.crypto_secretstream_xchacha20poly1305_TAG_FINAL
